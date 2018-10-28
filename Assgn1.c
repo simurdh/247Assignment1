@@ -163,6 +163,7 @@ void* threadFunction(void *arg)
 		}
 	}
 	//3.	Init the Condition variable and associated mutex
+
 	//if (pthread_cond_init(&g_conditionVar[????], NULL?)) {
 		//printf("failed to initialize cond\n");
 //	}
