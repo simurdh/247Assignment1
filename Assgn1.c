@@ -178,21 +178,24 @@ void* threadFunction(void *arg)
   }
 */
 	//5.	Once condition variable is signaled, use the �time� function and the �clock_gettime(CLOCK_REALTIME, &tms)� to get timestamp
-  struct timespec tms;
-
 	myThreadArg->startTime = time(&myThreadArg->startTime);
 
+  struct timespec tms;
+  clock_gettime(CLOCK_REALTIME, &tms);
+  myThreadArg->timeStamp[0] = tms.tv_sec *1000000;
+  myThreadArg->timeStamp[0] += tms.tv_nsec/1000;
+  if(tms.tv_nsec % 1000 >= 500 ) myThreadArg->timeStamp[0]++;
+
 	//6.	Call �DoProcess� to run your task
-  for(int i = 0; i < MAX_TASK_COUNT; i++) {
+  for(int i = 1; i <= MAX_TASK_COUNT; i++) {
     DoProcess();
+  //7.	Use �time� and �clock_gettime� to find end time.
+    clock_gettime(CLOCK_REALTIME, &tms);
     myThreadArg->timeStamp[i] = tms.tv_sec *1000000;
   	myThreadArg->timeStamp[i] += tms.tv_nsec/1000;
   	if(tms.tv_nsec % 1000 >= 500 ) myThreadArg->timeStamp[i]++;
 
   }
-
-	//7.	Use �time� and �clock_gettime� to find end time.
-  clock_gettime(CLOCK_REALTIME, &tms);
   myThreadArg->endTime = time(&myThreadArg->endTime);
 /*
 	//8.	You can repeat steps 6 and 7 a few times if you wish
