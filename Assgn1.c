@@ -135,7 +135,7 @@ void* threadFunction(void *arg)
 				printf("SCHED_OTHER NOT WORKING!\n");
 				handle_error_en(threadSchedParam, "pthread_setschedparam");
 			} else {
-        printf("Thread created for thread number %d\n", myThreadArg->threadCount);
+        //printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 			}
 	} else if (myThreadArg->threadPolicy == SCHED_FIFO) {
 		//printf("Inside SCHED_FIFO Function!\n");
@@ -145,7 +145,7 @@ void* threadFunction(void *arg)
 				printf("SCHED_FIFO NOT WORKING!\n");
 				handle_error_en(threadSchedParam, "pthread_setschedparam");
 			} else {
-        printf("Thread created for thread number %d\n", myThreadArg->threadCount);
+        //printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 			}
 	} else {
 		//printf("Inside SCHED_RR Function!\n");
@@ -155,24 +155,31 @@ void* threadFunction(void *arg)
 			printf("SCHED_RR NOT WORKING!\n");
 			handle_error_en(threadSchedParam, "pthread_setschedparam");
 		} else {
-      printf("Thread created for thread number %d\n", myThreadArg->threadCount);
+      //printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 		}
 	}
-	//3.	Init the Condition variable and associated mutex
 
   //Lock mutex
 if (pthread_mutex_lock(&g_ThreadMutex)) {
     printf("mutex lock failed\n");
     //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+  } else {
+  printf("mutex locked successfully for thread: %d\n", myThreadArg->threadCount);
   }
-printf("mutex locked for thread: %d\n", myThreadArg->threadCount);
 
 if (pthread_cond_wait(&g_conditionVar, &g_ThreadMutex)) {
   printf("pthread_cond_wait failed\n");
   //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+} else {
+  printf("pthread cond wait successful for thread: %d\n", myThreadArg->threadCount);
 }
-printf("condition variable signaled, not waiting anymore for thread: %d\n", myThreadArg->threadCount);
 
+if (pthread_mutex_unlock(&g_ThreadMutex)) {
+  printf("mutex unlock failed\n");
+  //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+} else {
+  printf("mutex unlocked for thread: %d\n", myThreadArg->threadCount);
+}
 	//4.	Wait on condition variable
 	//5.	Once condition variable is signaled, use the �time� function and the �clock_gettime(CLOCK_REALTIME, &tms)� to get timestamp
 	myThreadArg->startTime = time(&myThreadArg->startTime);
@@ -195,15 +202,7 @@ printf("condition variable signaled, not waiting anymore for thread: %d\n", myTh
   myThreadArg->endTime = time(&myThreadArg->endTime);
 
 	//8.	You can repeat steps 6 and 7 a few times if you wish
-  if (pthread_mutex_unlock(&g_ThreadMutex)) {
-    printf("mutex unlock failed\n");
-    //handle_error_en(threadSchedParam, "pthread_mutex_lock");
-  }
-  printf("mutex unlocked for thread: %d\n", myThreadArg->threadCount);
-  if (pthread_cond_broadcast(&g_conditionVar)) { //unblocks threads currently blocked on g_conditionVar
-    printf("error using pthread_cond_broadcast\n");
-    //handle_error_en(threadSchedParam, "pthread_cond_broadcast");
-  }
+
 }
 
 //========================================================================================================================================================
@@ -213,7 +212,7 @@ int main (int argc, char *argv[])
 	InitGlobals();
 	//2.	Create a number of threads (start with 1 and increase to 9) using �pthread_Create�
 		pthread_attr_t threadAttrib;
-		for (int i = 0; i < 1; i++) {
+		for (int i = 0; i < MAX_THREAD_COUNT; i++) {
 			if (pthread_attr_init(&threadAttrib) != 0) {
 				printf("Error initalizing threads attribute object\n");
 			}
@@ -232,13 +231,9 @@ int main (int argc, char *argv[])
 		}
 
 	//3.	Assign 3 threads to SCHED_OTHER, another 3 to SCHED_FIFO and another 3 to SCHED_RR //how come it says to assign the policy here and in thread function?
-  if (pthread_mutex_lock(&g_ThreadMutex)) {
-      printf("mutex lock failed\n");
-      //handle_error_en(threadSchedParam, "pthread_mutex_lock");
-    } else {
-      printf("mutex locked from main\n");
-    }
+
 	//4.	Signal the condition variable
+
   if (pthread_cond_broadcast(&g_conditionVar)) { //unblocks threads currently blocked on g_conditionVar
     printf("error using pthread_cond_broadcast\n");
     //handle_error_en(threadSchedParam, "pthread_cond_broadcast");
@@ -246,16 +241,10 @@ int main (int argc, char *argv[])
     printf("first pthread broadcast\n");
   }
 
-  if (pthread_mutex_unlock(&g_ThreadMutex)) {
-    printf("mutex unlock failed\n");
-    //handle_error_en(threadSchedParam, "pthread_mutex_lock");
-  }
-  printf("mutex unlocked from main\n");
-
 	//5.	Call �pthread_join� to wait on the thread
 	//6.	Display the stats on the threads
   int var;
-  for (int j = 0; j < 1; j++) {
+  for (int j = 0; j < MAX_THREAD_COUNT; j++) {
     printf("waiting for thread: %d\n", g_ThreadArgs[j].threadCount);
     var = pthread_join(g_ThreadArgs[j].threadId, NULL);
     if (var) {
