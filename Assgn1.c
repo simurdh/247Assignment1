@@ -88,12 +88,12 @@ void DisplayThreadSchdAttributes( pthread_t threadID, int policy, int priority )
 void DisplayThreadArgs(ThreadArgs*	myThreadArg)
 {
 int i,y;
-printf("startTime = %s\n", ctime(&myThreadArg->startTime));
-printf("startTime = %s\n", ctime(&g_ThreadArgs[0].startTime));
-
 
 if( myThreadArg )
 {
+  //Added print statements to fix bug
+  printf("startTime = %s\n endTime = %s\n", ctime(&myThreadArg->startTime), ctime(&myThreadArg->endTime));
+
 	DisplayThreadSchdAttributes(myThreadArg->threadId, myThreadArg->threadPolicy, myThreadArg->threadPri);
 	printf(" startTime = %s endTime = %s", ctime(&myThreadArg->startTime), ctime(&myThreadArg->endTime));
 	printf(" TimeStamp [%"PRId64"]\n", myThreadArg->timeStamp[0] );
@@ -119,14 +119,9 @@ void DoProcess(void)
 
 void* threadFunction(void *arg)
 {
-
 	//1.	Typecast the argument to a �ThreadArgs*� variable
 	ThreadArgs*	myThreadArg; //technique from below
 	myThreadArg = (ThreadArgs*)arg;
-	printf("Thread created for thread number %d\n", myThreadArg->threadCount);
-	printf("myThreadArg->threadPri = %d, myThreadArg->threadPolicy = %d, Threadid = %0x%lx\n\n", myThreadArg->threadPri, myThreadArg->threadPolicy, pthread_self());
-  //printf("myThreadArg->threadPri = %d, myThreadArg->threadPolicy = %d, Threadid = %0x%lx\n\n", myThreadArg->threadPri, myThreadArg->threadPolicy, myThreadArg->threadId);
-
 
 	//2.	Use the �pthread_setscheduleparam� API to set the thread policy
 	int threadSchedParam;
@@ -140,8 +135,7 @@ void* threadFunction(void *arg)
 				printf("SCHED_OTHER NOT WORKING!\n");
 				handle_error_en(threadSchedParam, "pthread_setschedparam");
 			} else {
-				//DisplayThreadSchdAttributes(pthread_self(), myThreadArg->threadPolicy, param.sched_priority);
-
+        printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 			}
 	} else if (myThreadArg->threadPolicy == SCHED_FIFO) {
 		//printf("Inside SCHED_FIFO Function!\n");
@@ -151,7 +145,7 @@ void* threadFunction(void *arg)
 				printf("SCHED_FIFO NOT WORKING!\n");
 				handle_error_en(threadSchedParam, "pthread_setschedparam");
 			} else {
-				DisplayThreadSchdAttributes(pthread_self(), myThreadArg->threadPolicy, param.sched_priority);
+        printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 			}
 	} else {
 		//printf("Inside SCHED_RR Function!\n");
@@ -161,22 +155,25 @@ void* threadFunction(void *arg)
 			printf("SCHED_RR NOT WORKING!\n");
 			handle_error_en(threadSchedParam, "pthread_setschedparam");
 		} else {
-			DisplayThreadSchdAttributes(pthread_self(), myThreadArg->threadPolicy, param.sched_priority);
+      printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 		}
 	}
 	//3.	Init the Condition variable and associated mutex
+
   //Lock mutex
-/*
-  if (pthread_mutex_lock(&g_ThreadMutex)) {
+if (pthread_mutex_lock(&g_ThreadMutex)) {
     printf("mutex lock failed\n");
     //handle_error_en(threadSchedParam, "pthread_mutex_lock");
   }
+printf("mutex locked for thread: %d\n", myThreadArg->threadCount);
+
+if (pthread_cond_wait(&g_conditionVar, &g_ThreadMutex)) {
+  printf("pthread_cond_wait failed\n");
+  //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+}
+printf("condition variable signaled, not waiting anymore for thread: %d\n", myThreadArg->threadCount);
+
 	//4.	Wait on condition variable
-  if (pthread_cond_wait(&g_conditionVar, &g_ThreadMutex)) {
-    printf("pthread_cond_wait failed\n");
-    //handle_error_en(threadSchedParam, "pthread_mutex_lock");
-  }
-*/
 	//5.	Once condition variable is signaled, use the �time� function and the �clock_gettime(CLOCK_REALTIME, &tms)� to get timestamp
 	myThreadArg->startTime = time(&myThreadArg->startTime);
 
@@ -194,18 +191,19 @@ void* threadFunction(void *arg)
     myThreadArg->timeStamp[i] = tms.tv_sec *1000000;
   	myThreadArg->timeStamp[i] += tms.tv_nsec/1000;
   	if(tms.tv_nsec % 1000 >= 500 ) myThreadArg->timeStamp[i]++;
-
   }
   myThreadArg->endTime = time(&myThreadArg->endTime);
-/*
+
 	//8.	You can repeat steps 6 and 7 a few times if you wish
   if (pthread_mutex_unlock(&g_ThreadMutex)) {
     printf("mutex unlock failed\n");
     //handle_error_en(threadSchedParam, "pthread_mutex_lock");
-  }*/
-  printf("startTime = %s\n", ctime(&myThreadArg->startTime));
-  printf("endTime = %s\n", ctime(&myThreadArg->endTime));
-
+  }
+  printf("mutex unlocked for thread: %d\n", myThreadArg->threadCount);
+  if (pthread_cond_broadcast(&g_conditionVar)) { //unblocks threads currently blocked on g_conditionVar
+    printf("error using pthread_cond_broadcast\n");
+    //handle_error_en(threadSchedParam, "pthread_cond_broadcast");
+  }
 }
 
 //========================================================================================================================================================
@@ -216,12 +214,11 @@ int main (int argc, char *argv[])
 	//2.	Create a number of threads (start with 1 and increase to 9) using �pthread_Create�
 		pthread_attr_t threadAttrib;
 		for (int i = 0; i < 1; i++) {
-			printf("i = %d\n", i);
 			if (pthread_attr_init(&threadAttrib) != 0) {
 				printf("Error initalizing threads attribute object\n");
 			}
 			if (pthread_create(&g_ThreadArgs[i].threadId, &threadAttrib, &threadFunction, &g_ThreadArgs[i]) != 0) {
-				printf("pthread_create failed for thread number %d : %d\n", i);
+				printf("pthread_create failed for thread number %d : %d\n", i); //need to fix
 			}
 			else
 			{
@@ -232,23 +229,38 @@ int main (int argc, char *argv[])
 			if (pthread_attr_destroy(&threadAttrib) != 0) {
 				printf("Error destroying threads attribute object\n");
 			}
-			//break;
 		}
 
 	//3.	Assign 3 threads to SCHED_OTHER, another 3 to SCHED_FIFO and another 3 to SCHED_RR //how come it says to assign the policy here and in thread function?
-
+  if (pthread_mutex_lock(&g_ThreadMutex)) {
+      printf("mutex lock failed\n");
+      //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+    } else {
+      printf("mutex locked from main\n");
+    }
 	//4.	Signal the condition variable
-  /*if (pthread_cond_broadcast(&g_conditionVar)) { //unblocks threads currently blocked on g_conditionVar
+  if (pthread_cond_broadcast(&g_conditionVar)) { //unblocks threads currently blocked on g_conditionVar
     printf("error using pthread_cond_broadcast\n");
     //handle_error_en(threadSchedParam, "pthread_cond_broadcast");
-  }*/
+  } else {
+    printf("first pthread broadcast\n");
+  }
+
+  if (pthread_mutex_unlock(&g_ThreadMutex)) {
+    printf("mutex unlock failed\n");
+    //handle_error_en(threadSchedParam, "pthread_mutex_lock");
+  }
+  printf("mutex unlocked from main\n");
+
 	//5.	Call �pthread_join� to wait on the thread
-  getchar();
 	//6.	Display the stats on the threads
-  printf("Threadid = %0x%lx\n\n", g_ThreadArgs[0].threadId);
-  printf("startTime = %s\n", ctime(&g_ThreadArgs[0].startTime));
-  printf("endTime = %s\n", ctime(&g_ThreadArgs[0].endTime));
+  int var;
   for (int j = 0; j < 1; j++) {
+    printf("waiting for thread: %d\n", g_ThreadArgs[j].threadCount);
+    var = pthread_join(g_ThreadArgs[j].threadId, NULL);
+    if (var) {
+      printf("pthread_join error\n");
+    }
     DisplayThreadArgs(&g_ThreadArgs[j]);
   }
 
