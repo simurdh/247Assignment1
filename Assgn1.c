@@ -141,34 +141,24 @@ void* threadFunction(void *arg)
 		param.sched_priority = myThreadArg->threadPri; //set the priority to 0
 		threadSchedParam = pthread_setschedparam(pthread_self(), myThreadArg->threadPolicy, &param);
 			if (threadSchedParam) {
-				handle_error_en(threadSchedParam, "pthread_setschedparam");
-			} else {
-      //print error
+				printf("error using pthread_setschedparam\n");
 			}
 	} else if (myThreadArg->threadPolicy == SCHED_FIFO) {
 		param.sched_priority = myThreadArg->threadPri; //set the priority to 1;
 		threadSchedParam = pthread_setschedparam(pthread_self(), myThreadArg->threadPolicy, &param); //set thread policy to FIFO
 			if (threadSchedParam) {
-				printf("SCHED_FIFO NOT WORKING!\n");
-				handle_error_en(threadSchedParam, "pthread_setschedparam");
-			} else {
-        //printf("Thread created for thread number %d\n", myThreadArg->threadCount);
+        printf("error using pthread_setschedparam\n");
 			}
 	} else {
 		param.sched_priority = myThreadArg->threadPri; //set the priority to 2;
 		threadSchedParam = pthread_setschedparam(pthread_self(), myThreadArg->threadPolicy, &param);  //set thread policy to RR
 		if (threadSchedParam) {
-			printf("SCHED_RR NOT WORKING!\n");
 			handle_error_en(threadSchedParam, "pthread_setschedparam");
-		} else {
-      //printf("Thread created for thread number %d\n", myThreadArg->threadCount);
 		}
 	}
-
   //Lock mutex
 if (pthread_mutex_lock(&g_ThreadMutex)) {
     printf("mutex lock failed\n");
-    //handle_error_en(threadSchedParam, "pthread_mutex_lock");
   } else {
   printf("mutex locked successfully for thread: %d\n", myThreadArg->threadCount);
   }
