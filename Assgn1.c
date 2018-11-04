@@ -2,12 +2,19 @@
 
  Analysis
 
-The scheduler decides which thread to execute next based on its thread policy and priority. When I call pthread_cond_broadcast in the main, the threads unblock based on their policies. Only one thread can use the CPU at a time, however in multicore systems multiple threads can use different CPUs at the same time.
+The scheduler decides which thread to execute next based on its thread policy and priority.
+When I call pthread_cond_broadcast in the main, the threads unblock based on their policies.
+Only one thread can use the CPU at a time, however in multicore systems multiple threads can use different CPUs at the same time.
 This may explain why the timestamps do not always reflect the expected latencies of the threads.
-First of all, in the FIFO threads there is no time slicing and the first thread to start runs to completion. This is why the delta (change) in the timestamps are fairly uniform in FIFO threads because each one starts and finishes without interuption in this program.
+
+First of all, in the FIFO threads there is no time slicing and the first thread to start runs to completion.
+This is why the delta (change) in the timestamps are fairly uniform in FIFO threads because each one starts and finishes without interuption in this program.
 There is less latency because the threads do not switch as often.
-For the RR threads, each thread runs until it reaches its time quantum, then the next thread begins running. This explains why there is a larger difference in the delta of the timestamps and more latency.
-For OTHER threads, they are supposed to progress fairly which is achieved through a nice value and dynamic prority. Also, it can be prempted by FIFO and RR threads. Therefore the latency between these threads can vary.
+
+For the RR threads, each thread runs until it reaches its time quantum, then the next thread begins running.
+This explains why there is a larger difference in the delta of the timestamps and more latency.
+For OTHER threads, they are supposed to progress fairly which is achieved through a nice value and dynamic prority.
+Also, it can be prempted by FIFO and RR threads. Therefore the latency between these threads vary.
 */
 
 //========================================================================================================================================================
@@ -45,9 +52,7 @@ typedef struct{
 	time_t endTime;
 } ThreadArgs;
 
-
 //Globals
-
 
 pthread_mutex_t g_ThreadMutex = PTHREAD_MUTEX_INITIALIZER; //initializes a mutex with default attributes using a macro
 pthread_cond_t g_conditionVar = PTHREAD_COND_INITIALIZER; //initializes a condition variable with default attributes using a macro
@@ -58,8 +63,6 @@ int condition2= 0; //used to have main wait until all threads have locked
 
 pthread_mutex_t g_ThreadMutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_conditionVar2 = PTHREAD_COND_INITIALIZER;
-
-
 
 //========================================================================================================================================================
 void InitGlobals(void)
@@ -85,7 +88,6 @@ void InitGlobals(void)
 
 		}
 }
-////////////////////////////////////////////////////////////////////////////////
 
 //========================================================================================================================================================
 void DisplayThreadSchdAttributes( pthread_t threadID, int policy, int priority )
